@@ -16,7 +16,7 @@ sim_vehicle.py -v ArduCopter -f gazebo-iris --console --map -I0
 
 3 terminal ana görevi başlat
 
-cd ~/Desktop/drone_calisma
+cd ~/Desktop/drone_inis_calismasi
 source /opt/ros/humble/setup.bash
 python3 yaw_son.py
 
