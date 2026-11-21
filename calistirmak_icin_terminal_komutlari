@@ -1,0 +1,25 @@
+1 terminal gazebo başlat. 
+
+source /opt/ros/humble/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/usr/share/gazebo-11/models:/home/mehmet/Desktop/drone_calisma/ardupilot_gazebo/models
+gazebo --verbose /home/mehmet/Desktop/drone_calisma/worlds/red_pad.world -s libgazebo_ros_init.so -s libgazebo_ros_factory.so
+
+
+
+2 terminal
+
+ardupilot başlat
+
+cd ~/Desktop/drone_calismalari/ardupilot
+sim_vehicle.py -v ArduCopter -f gazebo-iris --console --map -I0
+
+
+3 terminal ana görevi başlat
+
+cd ~/Desktop/drone_calisma
+source /opt/ros/humble/setup.bash
+python3 yaw_son.py
+
+4 terminal konum tahmini
+
+python3 tools/live_locate.py --pad-east 0 --pad-north 5 --csv sonuc.csv
