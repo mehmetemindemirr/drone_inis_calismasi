@@ -25,5 +25,13 @@ python3 yaw_son.py
 python3 tools/live_locate.py --pad-east 0 --pad-north 5 --csv sonuc.csv
 
 yeni terminaal konum çalışması
-cd ~/Desktop/drone_inis_calismasi
+cd ~/Desktop/drone_inis_calismasi/drone_vision
 python3 tools/pad_recorder.py --pad-east 0 --pad-north 5 --out kayit.json
+
+
+
+şimdi ise inişi test edelim.
+# T1 Gazebo, T2 sim_vehicle (aynı oturum, yeniden başlatmanız gerekmez)
+# T3 (drone_vision klasöründe)
+cd ~/Desktop/drone_inis_calismasi/drone_vision
+python3 tools/pad_lander.py --record kayit.json --pad-east 0 --pad-north 5 --log inis.csv
