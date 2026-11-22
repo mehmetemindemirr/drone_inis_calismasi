@@ -7,6 +7,7 @@ from .geometry import (CameraModel, GeometryError, PadLocation, altitude_from_ra
                        footprint_m, ground_offset_to_pixel, latlon_to_offset, locate_pad,
                        offset_to_latlon, pixel_to_ground_offset, quaternion_from_euler_deg,
                        quaternion_from_yaw, quaternion_to_matrix, vertical_height_from_range)
+from .padmap import AddResult, Observation, PadMap, PadMapConfig, PadRecord
 from .viz import draw_detections
 
 __all__ = [
