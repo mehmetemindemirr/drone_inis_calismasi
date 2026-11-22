@@ -25,4 +25,5 @@ python3 yaw_son.py
 python3 tools/live_locate.py --pad-east 0 --pad-north 5 --csv sonuc.csv
 
 yeni terminaal konum çalışması
+cd ~/Desktop/drone_inis_calismasi
 python3 tools/pad_recorder.py --pad-east 0 --pad-north 5 --out kayit.json
