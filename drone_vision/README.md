@@ -14,9 +14,13 @@ Durum: simülasyonda (Gazebo Classic + ArduPilot + MAVROS) doğrulandı, ölçü
 | `adapters/pad_watcher.py` | Gözlemci: en son kareyi alır, tespit eder, konsola yazar, fx'i ölçer, hata olsa uçuşu bozmaz |
 | `tools/live_detect.py` | Canlı izleme (ayrı süreç) |
 | `tools/live_locate.py` | Canlı konum tahmini; senin verdiğin GERÇEK pad konumuyla karşılaştırır, hatayı yazar, Ctrl+C'de teşhis basar (ayrı süreç) |
+| `tools/pad_recorder.py` | Canlı pad kaydedici: gözlem → `PadMap` (kapı + medyan) → yerel x,y + enlem-boylam, JSON/topic çıktısı (ayrı süreç) |
+| `pad_vision/landing.py` | İniş mantığı (ROS'suz): `load_record`/`choose_target`, `VisionTracker`, `LandingController` (APPROACH→DESCEND→LAND; SEARCH/BLIND yedekleri) |
+| `tools/pad_lander.py` | TEK drone hassas iniş görevi: `yaw_v3` durum makinesi + `LandingController`; MAVROS'u kendisi başlatır |
 | `tools/save_frames.py` | Kamera + konumu kaydeder (PNG + CSV) |
 | `tools/detect_images.py` | Kayıtlı karelerde çevrimdışı tespit (ROS gerekmez) |
-| `tests/` | 112 test, ROS gerekmez |
+| `pad_vision/padmap.py` | `PadMap`: gözlemleri kalite kapılarından geçirir, kümeler, medyanla tek pad konumu (yerel x,y + enlem-boylam) + JSON kaydı; ROS'suz |
+| `tests/` | 173 test, ROS gerekmez |
 
 ## Kurulum
 Gerekenler: `python3`, `python3-opencv`, `python3-numpy`; canlı araçlar için ROS 2 (Humble: simülasyon, Jazzy: Pi).
@@ -95,6 +99,14 @@ Gazebo'da x ekseninde verdiysen `--pad-north` ile ver; Doğu işaretini ilk çı
    `Ölçek ... %N` (yükseklik/hfov hatası). Önerileri uygulayıp tekrar dene. Hedef: durgun örneklerde 5-10 m'de ~0.3-0.5 m altı hata.
 4. Hata sabit bir yöne kayıyorsa (bias) kamera/yükseklik; rastgele dağılıyorsa tespit gürültüsü; hız arttıkça büyüyorsa
    kare-konum zaman uyumsuzluğu (bu araç kareyi işlendiği andaki en son konumla eşler).
+
+## Kayıt → iniş (tek drone): `pad_recorder.py` + `pad_lander.py`
+```bash
+python3 tools/pad_recorder.py --pad-east 0 --pad-north 5 --out kayit.json     # pad'in üstünden geç, drone'u indir
+python3 tools/pad_lander.py --record kayit.json --pad-east 0 --pad-north 5 --log inis.csv   # MAVROS'u kendisi başlatır
+```
+Sahada gerçek pad konumu verme; inişten sonra pad merkezi ile drone arasını mezurayla ölç. Gerçek drone: `--fcu-url /dev/ttyS0:115200 --sync-max 240 --topic ... --hfov 62.2`.
+`tests/test_pad_lander.py` düğümü SAHTE rclpy + basit fizikle baştan sona koşturur (duman testi, gerçek ROS/Gazebo değildir).
 
 ## Ayarlanacak eşikler (`DetectorConfig`, `models.py`)
 | Alan | Ne zaman değiştir |
