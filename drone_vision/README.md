@@ -20,7 +20,7 @@ Durum: simülasyonda (Gazebo Classic + ArduPilot + MAVROS) doğrulandı, ölçü
 | `tools/save_frames.py` | Kamera + konumu kaydeder (PNG + CSV) |
 | `tools/detect_images.py` | Kayıtlı karelerde çevrimdışı tespit (ROS gerekmez) |
 | `pad_vision/padmap.py` | `PadMap`: gözlemleri kalite kapılarından geçirir, kümeler, medyanla tek pad konumu (yerel x,y + enlem-boylam) + JSON kaydı; ROS'suz |
-| `tests/` | 173 test, ROS gerekmez |
+| `tests/` | 180 test, ROS gerekmez |
 
 ## Kurulum
 Gerekenler: `python3`, `python3-opencv`, `python3-numpy`; canlı araçlar için ROS 2 (Humble: simülasyon, Jazzy: Pi).
@@ -105,6 +105,7 @@ Gazebo'da x ekseninde verdiysen `--pad-north` ile ver; Doğu işaretini ilk çı
 python3 tools/pad_recorder.py --pad-east 0 --pad-north 5 --out kayit.json     # pad'in üstünden geç, drone'u indir
 python3 tools/pad_lander.py --record kayit.json --pad-east 0 --pad-north 5 --log inis.csv   # MAVROS'u kendisi başlatır
 ```
+Mavi pad: iki araçta da `--color mavi` (recorder'da `--color hepsi` ikisini aynı `kayit.json`'a yazar; `--truth-color` gerçek konumun hangi renge ait olduğunu söyler).
 Sahada gerçek pad konumu verme; inişten sonra pad merkezi ile drone arasını mezurayla ölç. Gerçek drone: `--fcu-url /dev/ttyS0:115200 --sync-max 240 --topic ... --hfov 62.2`.
 `tests/test_pad_lander.py` düğümü SAHTE rclpy + basit fizikle baştan sona koşturur (duman testi, gerçek ROS/Gazebo değildir).
 

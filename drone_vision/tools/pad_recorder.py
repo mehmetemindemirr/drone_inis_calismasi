@@ -10,6 +10,10 @@ kaydedilen konumu yerel x,y VE enlem-boylam olarak yazar. Istersen gercek konuml
   # gercek konumu bilmiyorsan (sahada) --pad-east/--pad-north verme: yalniz kaydeder
   python3 tools/pad_recorder.py --hfov 62.2 --topic /camera/image_raw --out kayit.json
 
+  # MAVI pad icin ya da ikisini birden kaydetmek icin
+  python3 tools/pad_recorder.py --color mavi --pad-east 0 --pad-north 5 --out kayit_mavi.json
+  python3 tools/pad_recorder.py --color hepsi --out kayit.json      # ikisi de ayni dosyaya
+
 Cikti: [GOZ] satiri = her kapidan gecen gozlem, [RED] = elenen gozlem (nedeniyle, 3 sn'de bir),
 [KAYIT] = PadMap'in guncel kaydi. Ctrl+C'de OZET basar ve --out JSON dosyasina yazar.
 --publish: kayitlari std_msgs/String (JSON) olarak /pad_vision/pad_records konusuna da yayinlar
@@ -63,6 +67,11 @@ def make_observation(rep: WatchReport, pose: PoseSnapshot, *, t: float, pose_age
                                      speed_mps=speed, pose_age_s=pose_age_s), ""
 
 
+def colors_for(choice: str) -> List[str]:
+    """--color degerinden taranacak renk listesi ('hepsi' = ikisi)."""
+    return ["kirmizi", "mavi"] if choice == "hepsi" else [choice]
+
+
 def format_obs(t: float, o: Observation) -> str:
     ll = f" enlem={o.lat_deg:.7f} boylam={o.lon_deg:.7f}" if o.has_latlon else ""
     sp = f"{o.speed_mps:.2f}" if o.speed_mps is not None else "?"
@@ -81,13 +90,14 @@ def format_record(r: PadRecord, truth: Optional[Tuple[float, float]] = None) -> 
     return f"[KAYIT] {r.color.upper()} {state} n={r.n} {loc}{ll} dagilim={r.spread_m:.2f} m{err}"
 
 
-def summary(pm: PadMap, truth: Optional[Tuple[float, float]], rejects: dict) -> str:
+def summary(pm: PadMap, truth: Optional[Tuple[float, float]], rejects: dict,
+            truth_color: Optional[str] = None) -> str:
     lines = ["", "=" * 70, "OZET"]
     recs = pm.records()
     if not recs:
         lines.append("Hic pad kaydedilmedi (pad gorunmedi ya da tum gozlemler elendi).")
     for r in recs:
-        lines.append(format_record(r, truth))
+        lines.append(format_record(r, truth if truth_color in (None, r.color) else None))
     if rejects:
         lines.append("Elenen gozlemler: " + ", ".join(f"{k}={v}" for k, v in sorted(rejects.items())))
         lines.append("  (cok 'hiz'/'egim' varsa pad'in ustunden yavas gec ya da PadMapConfig esiklerini gevset;"
@@ -114,6 +124,8 @@ def run(args):
     speed_est = SpeedEstimator()
     truth = (args.pad_east, args.pad_north) if args.pad_east is not None and args.pad_north is not None else None
     rejects: dict = {}
+    colors = colors_for(args.color)
+    truth_color = args.truth_color or (args.color if args.color != "hepsi" else "kirmizi")
 
     class Recorder(Node):
         def __init__(self):
@@ -162,24 +174,25 @@ def run(args):
                 self.say("pose", "[RED] konum verisi yok (/mavros/local_position/pose)")
                 return
             latlon = self.gps if (self.gps is not None and now - self.gps_t < 2.0) else None
-            obs, reason = make_observation(rep, pose, t=now - self.t0, pose_age_s=now - self.pose_t,
-                                           speed=speed_est.speed(), hfov_deg=args.hfov, color=args.color,
-                                           mount_yaw_deg=args.mount_yaw, ground_z=args.ground_z,
-                                           latlon=latlon, min_height_m=args.min_height)
-            if obs is None:
-                self.say(reason, f"[SKIP] {reason}")
-                return
-            res = pm.add(obs)
-            if not res.accepted:
-                rejects[res.reason] = rejects.get(res.reason, 0) + 1
-                self.say("red_" + res.reason, f"[RED] gozlem elendi: {res.reason}")
-                return
-            print(format_obs(now - self.t0, obs), flush=True)
-            print(format_record(res.record, truth), flush=True)
-            if self.pub is not None:
-                self.pub.publish(String(data=pm.to_json()))
-            if args.out:
-                save_json(pm, args.out)
+            for color in colors:
+                obs, reason = make_observation(rep, pose, t=now - self.t0, pose_age_s=now - self.pose_t,
+                                               speed=speed_est.speed(), hfov_deg=args.hfov, color=color,
+                                               mount_yaw_deg=args.mount_yaw, ground_z=args.ground_z,
+                                               latlon=latlon, min_height_m=args.min_height)
+                if obs is None:
+                    self.say(reason, f"[SKIP] {reason}")
+                    continue
+                res = pm.add(obs)
+                if not res.accepted:
+                    rejects[res.reason] = rejects.get(res.reason, 0) + 1
+                    self.say(f"red_{color}_{res.reason}", f"[RED] {color} gozlem elendi: {res.reason}")
+                    continue
+                print(format_obs(now - self.t0, obs), flush=True)
+                print(format_record(res.record, truth if color == truth_color else None), flush=True)
+                if self.pub is not None:
+                    self.pub.publish(String(data=pm.to_json()))
+                if args.out:
+                    save_json(pm, args.out)
 
     rclpy.init()
     node = Recorder()
@@ -196,7 +209,7 @@ def run(args):
         if args.out:
             save_json(pm, args.out)
             print(f"Kayit yazildi: {args.out}", flush=True)
-        print(summary(pm, truth, rejects), flush=True)
+        print(summary(pm, truth, rejects, truth_color), flush=True)
 
 
 def parse(argv=None):
@@ -209,7 +222,10 @@ def parse(argv=None):
     ap.add_argument("--hfov", type=float, default=80.0, help="yatay gorus acisi; simulasyon 80, Pi Cam V2 62.2")
     ap.add_argument("--mount-yaw", type=float, default=0.0)
     ap.add_argument("--ground-z", type=float, default=0.0)
-    ap.add_argument("--color", choices=("kirmizi", "mavi"), default="kirmizi")
+    ap.add_argument("--color", choices=("kirmizi", "mavi", "hepsi"), default="kirmizi",
+                    help="kaydedilecek pad rengi; 'hepsi' = kirmizi ve mavi birlikte")
+    ap.add_argument("--truth-color", choices=("kirmizi", "mavi"), default=None,
+                    help="--pad-east/--pad-north hangi rengin gercek konumu (varsayilan: --color, hepsi ise kirmizi)")
     ap.add_argument("--min-height", type=float, default=1.0)
     ap.add_argument("--max-tilt", type=float, default=4.0, help="kapi: en fazla egim (derece)")
     ap.add_argument("--max-speed", type=float, default=1.5, help="kapi: en fazla hiz (m/s)")

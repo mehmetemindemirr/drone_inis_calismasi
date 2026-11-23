@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tools"))
 
-from pad_vision import (CameraModel, PadMap, ground_offset_to_pixel,  # noqa: E402
+from pad_vision import (CameraModel, Observation, PadMap, ground_offset_to_pixel,  # noqa: E402
                         offset_to_latlon, quaternion_from_euler_deg)
 
 spec = importlib.util.spec_from_file_location("pad_recorder", ROOT / "tools" / "pad_recorder.py")
@@ -104,6 +104,40 @@ class EndToEndTests(unittest.TestCase):
 
     def test_bos_ozet(self):
         self.assertIn("Hic pad", pr.summary(PadMap(), None, {}))
+
+
+class ColorTests(unittest.TestCase):
+    def test_colors_for(self):
+        self.assertEqual(pr.colors_for("kirmizi"), ["kirmizi"])
+        self.assertEqual(pr.colors_for("mavi"), ["mavi"])
+        self.assertEqual(pr.colors_for("hepsi"), ["kirmizi", "mavi"])
+
+    def test_mavi_gozlem_ve_pad_map(self):
+        from pad_vision import PadDetection
+        from adapters.pad_watcher import WatchReport
+        pose = PoseSnapshot(0.0, 0.0, 9.0, LEVEL)
+        u, v = ground_offset_to_pixel(2.0, 3.0, CAM, pose.z, LEVEL)
+        r = CAM.fx / pose.z
+        det = PadDetection("mavi", (u, v), r, math.pi * r * r, 0.95, 0.99, False)
+        rep = WatchReport(0.0, (640, 480), pose.z, (det,), {})
+        o, _ = pr.make_observation(rep, pose, t=1.0, pose_age_s=0.1, speed=0.2, hfov_deg=HFOV, color="mavi")
+        self.assertEqual(o.color, "mavi")
+        o2, why = pr.make_observation(rep, pose, t=1.0, pose_age_s=0.1, speed=0.2, hfov_deg=HFOV, color="kirmizi")
+        self.assertIsNone(o2)
+        self.assertIn("kirmizi", why)
+
+    def test_ozet_gercek_konum_yalniz_ilgili_renge(self):
+        pm = PadMap()
+        for _ in range(3):
+            pm.add(Observation("kirmizi", 1.0, 0.0, 5.0, height_m=9.0, confidence=0.9))
+            pm.add(Observation("mavi", 1.0, 30.0, 5.0, height_m=9.0, confidence=0.9))
+        s = pr.summary(pm, (0.0, 5.0), {}, truth_color="kirmizi")
+        self.assertEqual(s.count("HATA="), 1)                      # mavi'ye kirmizinin gercegi uygulanmaz
+        self.assertIn("KIRMIZI", s)
+
+    def test_hepsi_arguman(self):
+        a = pr.parse(["--color", "hepsi", "--truth-color", "mavi"])
+        self.assertEqual((a.color, a.truth_color), ("hepsi", "mavi"))
 
 
 class ParseTests(unittest.TestCase):

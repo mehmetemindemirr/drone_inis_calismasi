@@ -135,8 +135,8 @@ class World:
 class FakeWatcher:
     """PadWatcher yerine: dunyadaki pad'i sentetik 'tespit' olarak dondurur (gercek geometriyle)."""
 
-    def __init__(self, world, clock, every=0.2):
-        self.w, self.c, self.every = world, clock, every
+    def __init__(self, world, clock, every=0.2, color="kirmizi"):
+        self.w, self.c, self.every, self.color = world, clock, every, color
         self.last_report = None
         self._last = -1e9
 
@@ -157,7 +157,7 @@ class FakeWatcher:
             inside = r < u < 640 - r and r < v < 480 - r
             touches = (u - r < 0 or u + r > 640 or v - r < 0 or v + r > 480)
             if (-r < u < 640 + r) and (-r < v < 480 + r) and not (not inside and not touches):
-                det.append(PadDetection("kirmizi", (u, v), r, math.pi * r * r, 0.95, 0.99, touches))
+                det.append(PadDetection(self.color, (u, v), r, math.pi * r * r, 0.95, 0.99, touches))
         self.last_report = WatchReport(self.c.t, (640, 480), alt, tuple(det), {})
         return self.last_report
 
@@ -225,27 +225,29 @@ def load_lander():
     return mod
 
 
-def write_record(d, east, north, lat_lon_err=(0.0, 0.0)):
-    lat, lon = offset_to_latlon(ORIGIN[0], ORIGIN[1], east + lat_lon_err[0], north + lat_lon_err[1])
+def write_record(d, east, north, lat_lon_err=(0.0, 0.0), color="kirmizi", extra=()):
+    """kayit.json yaz. extra: ayni dosyaya eklenecek baska (renk, dogu, kuzey) kayitlari."""
+    def entry(c, e, n):
+        lat, lon = offset_to_latlon(ORIGIN[0], ORIGIN[1], e + lat_lon_err[0], n + lat_lon_err[1])
+        return {"color": c, "east_m": e, "north_m": n, "lat_deg": lat, "lon_deg": lon, "n": 5,
+                "spread_m": 0.03, "t_first": 1.0, "t_last": 2.0, "recorded": True}
     p = Path(d) / "kayit.json"
-    p.write_text(json.dumps([{"color": "kirmizi", "east_m": east, "north_m": north, "lat_deg": lat,
-                              "lon_deg": lon, "n": 5, "spread_m": 0.03, "t_first": 1.0, "t_last": 2.0,
-                              "recorded": True}]), encoding="utf-8")
+    p.write_text(json.dumps([entry(color, east, north)] + [entry(*x) for x in extra]), encoding="utf-8")
     return str(p)
 
 
-def fly(pad, rec_xy, extra=(), visible=True, max_steps=40000):
+def fly(pad, rec_xy, extra=(), visible=True, max_steps=40000, color="kirmizi", rec_extra=()):
     """Dugumu bastan sona calistir. (world, cikti, args) dondur."""
     clock = FakeClock()
     world = World(clock, pad)
     d = tempfile.mkdtemp()
-    rec = write_record(d, *rec_xy)
+    rec = write_record(d, *rec_xy, color=color, extra=rec_extra)
     mod = load_lander()
     args = mod.parse(["--record", rec, "--no-mavros", "--pad-east", str(pad[0]), "--pad-north", str(pad[1]),
-                      "--start-alt", "5", "--log", str(Path(d) / "inis.csv"), *extra])
+                      "--start-alt", "5", "--log", str(Path(d) / "inis.csv"), "--color", color, *extra])
     buf = io.StringIO()
     stubs = make_stubs(world)
-    fake_watcher = FakeWatcher(world, clock)
+    fake_watcher = FakeWatcher(world, clock, color=color)
     if not visible:
         fake_watcher.update = lambda alt: None
     steps = {"n": 0}
@@ -287,6 +289,33 @@ class LanderSmokeTests(unittest.TestCase):
         self.assertIn("PAD GORULMEDI", out)
         err = math.hypot(world.landed_xy[0] - 3.3, world.landed_xy[1] - 4.2)
         self.assertLess(err, 0.6)                                      # kayitli konuma indi
+
+    def test_mavi_pad_icin_tam_gorev(self):
+        pad = (-2.0, 6.0)
+        world, out, args, csvp = fly(pad, rec_xy=(-1.6, 6.4), color="mavi")
+        self.assertIsNotNone(world.landed_xy, out[-1500:])
+        err = math.hypot(world.landed_xy[0] - pad[0], world.landed_xy[1] - pad[1])
+        self.assertLess(err, 0.4, out[-2500:])
+        self.assertIn("Pad gorsel olarak bulundu", out)
+
+    def test_iki_renkli_kayitta_mavi_secilince_mavi_padi_hedefler(self):
+        blue, red = (-2.0, 6.0), (4.0, 3.0)
+        world, out, args, csvp = fly(blue, rec_xy=(-1.7, 6.3), color="mavi",
+                                     rec_extra=[("kirmizi", red[0], red[1])])
+        self.assertIsNotNone(world.landed_xy)
+        self.assertLess(math.hypot(world.landed_xy[0] - blue[0], world.landed_xy[1] - blue[1]), 0.4)
+        self.assertGreater(math.hypot(world.landed_xy[0] - red[0], world.landed_xy[1] - red[1]), 3.0)
+
+    def test_kirmizi_istenip_kayitta_yalniz_mavi_varsa_havalanmaz(self):
+        mod = load_lander()
+        d = tempfile.mkdtemp()
+        rec = write_record(d, 1.0, 2.0, color="mavi")
+        args = mod.parse(["--record", rec, "--no-mavros", "--color", "kirmizi"])
+        world = World(FakeClock(), (0, 0))
+        with mock.patch.dict(sys.modules, make_stubs(world)), mock.patch.object(mod, "time", world.clock):
+            with self.assertRaises(ValueError):
+                mod.run(args)
+        self.assertFalse(world.armed)
 
     def test_kayit_yoksa_havalanmaz(self):
         mod = load_lander()
