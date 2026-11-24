@@ -1,0 +1,21 @@
+source ~/camera_ws/install/setup.bash
+source /opt/ros/jazzy/setup.bash
+ros2 run camera_ros camera_node --ros-args -p width:=1280 -p height:=960
+
+source /opt/ros/jazzy/setup.bash
+python3 tools/live_detect.py --topic /camera/image_raw --hfov 62.2
+
+
+
+
+
+doğru olan kodlar kmaera normak görğlüyor
+
+source ~/camera_ws/install/setup.bash
+export LIBCAMERA_RPI_TUNING_FILE=/home/pi2/camera_ws/install/libcamera/share/libcamera/ipa/rpi/vc4/imx219_noir.json
+ros2 run camera_ros camera_node --ros-args -p width:=1280 -p height:=960 -p orientation:=180
+
+
+
+source ~/camera_ws/install/setup.bash
+cd ~ && python3 ~/kontrol.py
