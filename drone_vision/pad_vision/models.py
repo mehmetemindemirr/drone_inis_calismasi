@@ -21,6 +21,8 @@ class ColorProfile:
 
 # OpenCV HSV: H 0..179, S 0..255, V 0..255.
 # Kirmizi, H ekseninin iki ucunda durur (0 civari ve 179 civari): iki aralik gerekir.
+#openCV de Hue yani renk tonu 0 ile 360 yerine -> 0 ile 179 arasına sıkıştırılmıştır. kırmızı renk renk çemberinin tam başlangıç ve bitiş noktasında durduğu için tek aralıkta yakalanmayabilir. 
+#alt sınır üst sınır tek bir tuple için alt sınır ve üst sınır diğer tuple için. bunlar tek tek HSV değerleridir. 
 RED = ColorProfile("kirmizi", (
     ((0, 120, 70), (10, 255, 255)),
     ((170, 120, 70), (179, 255, 255)),
@@ -92,3 +94,12 @@ def expected_radius_px(altitude_m: float, fx_px: float, pad_radius_m: float = 1.
     if altitude_m <= 0.0:
         raise ValueError("altitude_m > 0 olmali")
     return fx_px * pad_radius_m / altitude_m
+
+"""
+daha iyi anlaşılması adına sayısal örnek verelim.
+mesela daire çapı 0.5 metre
+irtifa 10 metre 
+kamera odak uzaklığı 800 piksel dersek eğer
+600 x 0.5 / 10 = 30 piksel geliyor. 
+yani kenarı ulaşmak için 30 piksel gider. bu şekilde şeklin tam olarak uzunluğunu bulmuş oluruz. 
+"""
