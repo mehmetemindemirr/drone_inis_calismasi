@@ -1,6 +1,0 @@
-mehmet@mehmet-virtual-machine:~/Desktop/drone_inis_calismasi/drone_vision$ python3 tools/pad_recorder.py --pad-east 0 --pad-north 5 --out kayit.json
-Traceback (most recent call last):
-  File "/home/mehmet/Desktop/drone_inis_calismasi/drone_vision/tools/pad_recorder.py", line 36, in <module>
-    from pad_vision import (CameraModel, GeometryError, Observation, PadMap,  # noqa: E402
-ImportError: cannot import name 'Observation' from 'pad_vision' (/home/mehmet/Desktop/drone_inis_calismasi/drone_vision/pad_vision/__init__.py)
-mehmet@mehmet-virtual-machine:~/Desktop/drone_inis_calismasi/drone_vision$ 
