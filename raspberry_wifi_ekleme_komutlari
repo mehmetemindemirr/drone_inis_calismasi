@@ -1,0 +1,60 @@
+---- raspberry wifi ekleme ----          
+
+biz ubuntu server kullanıyoruz.
+
+1).ilk başta yapılandırma dosyasını bulacağız.
+ls /etc/netplan/
+
+genelde dosya şu olur: 50-cloud-init.yaml
+
+2).sonrasında yedek alalım hocam ne olur ne olmaz.
+sudo cp /etc/netplan/50-cloud-init.yaml ~/netplan-yedek.yaml
+
+3). dosyayı düzenleyelim.
+sudo nano /etc/netplan/50-cloud-init.yaml
+
+4).yeni ağı eklemeye hazırız hocam.
+genelde şöyle gözükür:
+network:
+  version: 2
+  wifis:
+    wlan0:
+      dhcp4: true
+      optional: true
+      access-points:
+        "MEVCUT_AG":
+          password: "mevcut_sifre"
+        "AG_ADI":
+          password: "SIFRE"
+
+
+yapı olarak şunu kopyalayıp rahat bir şekilde değiştirebilirsiniz:
+
+network:
+  version: 2
+  ethernets:
+    eth0:
+      optional: true
+      dhcp4: true
+      dhcp6: true
+  wifis:
+    wlan0:
+      optional: true
+      dhcp4: true
+      regulatory-domain: "TR"
+      access-points:
+        "zehra":
+          auth:
+            key-management: "psk"
+            password: "zehra123"
+        "deneme":
+          auth:
+            key-management: "psk"
+            password: "deneme123"
+
+
+
+5). en son ise şu komutu çalıştırmalıyız.
+sudo netplan try
+
+bu komut ağ yapılandırmalarını test etmek için girdiğimiz komuttur.
