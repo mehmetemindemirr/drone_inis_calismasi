@@ -9,6 +9,24 @@ from .models import ColorProfile
 """
 ilk başta boş bir  zerolardan oluşan bir matris oluşturur. 
 sonra for ile 2 kırmızı aralığını döner. 
+inrange sayesinde her 2 kırmızı aralığını da alır. 
+
+kırmızı değerleri
+lower = (0, 100, 100)
+upper = (10, 255, 255)
+mesela bir piksel 
+pixel = (5, 180, 200)
+Kontrol edelim:
+
+- H: 0 ≤ 5 ≤ 10 → Doğru.
+- S: 100 ≤ 180 ≤ 255 → Doğru.
+- V: 100 ≤ 200 ≤ 255 → Doğru.
+Sonuç: 255.
+
+mesela 
+pixel = (15, 180, 200)
+H değeri sınır dışında kaldığı için 0 değeri atanır.
+peki neden 0 veya 255 ya siyahtır ya beyazdır tespit ettiğimiz kısımların beyaz kalması amacımızdır. 
 
 
 """
