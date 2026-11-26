@@ -11,7 +11,12 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
+"""
+segmentation - > hangi pikseller hedef renkte?
+analysis -> bu pikeseller nasıl bir şekil oluşturuyor? ve geometrik özellikleri nelerdir? 
 
+
+"""
 
 @dataclass(frozen=True)
 class Candidate:
